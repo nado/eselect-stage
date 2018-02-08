@@ -1,0 +1,18 @@
+#
+# Copy this file to mount-chroot.<name>
+#
+
+# Path of your chroot mount point
+#CHROOT_PATH=""
+
+# Should we bind /usr/portage ? 1/0
+#PORTAGE=1
+
+# Should we make it writable ?
+#PORTAGE_RW=0
+
+# Should we mount /usr/portage/distfiles ? (useless when PORTAGE is set to 1)
+#PORTAGE_DIST=1
+
+# Should we make the portage distfiles directory writable ? (useless if PORTAGE_RW is set to 1)
+#PORTAGE_DIST_RW=1

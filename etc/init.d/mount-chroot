@@ -1,0 +1,71 @@
+#!/sbin/openrc-run
+# Copyright 1999-2018 Gentoo Foundation
+# Distributed under the terms of the GNU General Public License v2
+
+CHROOT=${SVCNAME#*.}
+if [ ${SVCNAME} = "mount-chroot" ]; then
+	CHROOT_PATH=""
+fi
+
+depend() {
+	need localmount
+	need bootmisc
+}
+
+start() {
+	if [ "${CHROOT_PATH}" = "" ]; then
+		eerror "You must set the variable CHROOT_PATH in the config file"
+		return 1
+	fi
+	ebegin "Mounting chroot directories"
+	mount --rbind /dev "${CHROOT_PATH}"/dev > /dev/null &
+	mount -t proc none "${CHROOT_PATH}"/proc > /dev/null &
+	mount -o bind /sys "${CHROOT_PATH}"/sys > /dev/null &
+
+	# mkdir new /tmp/mount-chroot/chrootname and bind it instead of /tmp for more isolation
+	mount -o bind /tmp "${CHROOT_PATH}"/tmp > /dev/null &
+
+	if [[ $PORTAGE -eq 1 ]]; then
+		if [ ! -d "${CHROOT_PATH}/usr/portage" ]; then
+			mkdir -p "${CHROOT_PATH}/usr/portage" || die "Could not create portage dir"
+		fi
+
+		local rwmountopt="-r"
+		if [[ $PORTAGE_RW -eq 1 ]]; then
+			RW="-w"
+		fi
+
+		# rbind is needed to mount potential nfs shared portage dir from host
+		mount --rbind "${rwmountopt}" /usr/portage "${CHROOT_PATH}/usr/portage" > /dev/null &
+	else
+		if [[ $PORTAGE_DIST -eq 1 ]]; then
+			if [ ! -d "${CHROOT_PATH}/usr/portage/distfiles" ]; then
+				mkdir -p "${CHROOT_PATH}/usr/portage/distfiles" || die "Could not create portage distfiles dir"
+			fi
+
+			local rwmountopt="-r"
+			if [[ $PORTAGE_DIST_RW -eq 1 ]]; then
+				RW="-w"
+			fi
+
+			# rbind is needed to mount potential nfs shared portage dir from host
+			mount --rbind "${rwmountopt}" /usr/portage/distfiles "${CHROOT_PATH}/usr/portage/distfiles" > /dev/null &
+		fi
+	fi
+	eend $? "An error occurred while mounting chroot directories"
+}
+
+stop() {
+	ebegin "Unmounting chroot directories"
+	umount -Rf "${CHROOT_PATH}"/dev > /dev/null &
+	umount -f "${CHROOT_PATH}"/proc > /dev/null &
+	umount -f "${CHROOT_PATH}"/sys > /dev/null &
+	umount -f "${CHROOT_PATH}"/tmp > /dev/null &
+	if [ `stat -fc%t:%T "${CHROOT_PATH}/usr/portage/distfiles"` != `stat -fc%t:%T "${CHROOT_PATH}/usr/portage"` ]; then
+		umount -Rf "${CHROOT_PATH}"/usr/portage/distfiles > /dev/null &
+	fi
+	if [ `stat -fc%t:%T "${CHROOT_PATH}/usr/portage"` != `stat -fc%t:%T "${CHROOT_PATH}/usr"` ]; then
+		umount -Rf "${CHROOT_PATH}"/usr/portage > /dev/null &
+	fi
+	eend $? "An error occurred while unmounting chroot directories"
+}
