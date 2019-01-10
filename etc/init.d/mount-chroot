@@ -75,10 +75,13 @@ start() {
 
 stop() {
 	ebegin "Unmounting chroot directories"
-	umount -Rf "${CHROOT_PATH}"/dev > /dev/null &
-	umount -Rf "${CHROOT_PATH}"/proc > /dev/null &
-	umount -Rf "${CHROOT_PATH}"/sys > /dev/null &
+
+	# Only background /tmp umount because the others may need time for
+	# recursive operations
 	umount -Rf "${CHROOT_PATH}"/tmp > /dev/null &
+	umount -Rf "${CHROOT_PATH}"/dev > /dev/null
+	umount -Rf "${CHROOT_PATH}"/proc > /dev/null
+	umount -Rf "${CHROOT_PATH}"/sys > /dev/null
 
 	while [ $(grep -- "${CHROOT_PATH}" /proc/self/mountinfo | wc -l) -gt 0 ]; do
 		umount -Rf "$(grep -- ${CHROOT_PATH} /proc/self/mountinfo|head -n1|cut -d' ' -f5)"> /dev/null
