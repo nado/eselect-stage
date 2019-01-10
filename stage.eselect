@@ -91,7 +91,7 @@ describe_list_options() {
 	echo "chroots : List installed chroot directories"
 	echo "cache   : List downloaded stage tarballs"
 	echo "latest  : List latest tarballs available"
-	echo "arch    : Only list latest tarballs from given arch (amd64, x86, etc)"
+	echo "arch    : Specify arch to list"
 }
 
 do_list() {
@@ -194,7 +194,7 @@ setup_chroot() {
 
 
 describe_add() {
-	echo "Add a chroot directory with a stage-3 Gentoo install"
+	echo "Add a chroot directory with a stage3 Gentoo install"
 }
 
 describe_add_parameters() {
@@ -202,9 +202,9 @@ describe_add_parameters() {
 }
 
 describe_add_options() {
-	echo "name:"
-	echo "arch:"
-	echo "profile_idx:"
+	echo "name : Name of the chroot"
+	echo "arch : ${ARCH_AVAILABLE[@]}"
+	echo "profile_idx : Per arch index of the latest stages"
 }
 
 do_add() {
@@ -243,8 +243,7 @@ do_add() {
 ## {{{
 
 describe_enable() {
-# enable > mount + chroot into dir
-	echo "Start needed mount-chroot service and chroot into installed stage"
+	echo "Start mount-chroot.<name> service and chroot into installed stage"
 }
 
 describe_enable_parameters() {
