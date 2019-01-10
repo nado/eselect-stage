@@ -175,11 +175,14 @@ setup_chroot() {
 	# Portage conf
 	mkdir -p "${chroot_dir}/etc/portage/repos.conf" || die
 
-	cp "${chroot_dir}/usr/share/portage/config/repos.conf" "${chroot_dir}/etc/portage/repos.conf/gentoo.conf" || die
+	cp "${chroot_dir}/usr/share/portage/config/repos.conf" \
+		"${chroot_dir}/etc/portage/repos.conf/gentoo.conf" || die
 
-	sed 's/auto-sync = yes/auto-sync = no/' -i "${chroot_dir}/etc/portage/repos.conf/gentoo.conf" || die
+	sed -i -e '/^PORTDIR/d' \
+		"${chroot_dir}/etc/portage/make.conf" || die
 
-	echo "export PS1=\"(chroot:${chroot_name}) \$PS1\"" >> "${chroot_dir}/etc/bash/bashrc"
+	echo "export PS1=\"(chroot:${chroot_name}) \$PS1\"" \
+		>> "${chroot_dir}/etc/bash/bashrc"
 
 	# Mounts handled by mount-chroot
 	ln -s mount-chroot "${EROOT%/}/etc/init.d/mount-chroot.${chroot_name}"

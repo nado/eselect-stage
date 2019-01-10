@@ -76,9 +76,10 @@ start() {
 stop() {
 	ebegin "Unmounting chroot directories"
 
-	# Only background /tmp umount because the others may need time for
-	# recursive operations
-	umount -Rf "${CHROOT_PATH}"/tmp > /dev/null &
+	# umount may need time for recursive operations and the others might fail
+	# if the previous didnt succeed (/dev/tmpfs for example)
+	rm -rf "${CHROOT_PATH}"/tmp/*
+	umount -Rf "${CHROOT_PATH}"/tmp > /dev/null
 	umount -Rf "${CHROOT_PATH}"/dev > /dev/null
 	umount -Rf "${CHROOT_PATH}"/proc > /dev/null
 	umount -Rf "${CHROOT_PATH}"/sys > /dev/null
