@@ -1,0 +1,298 @@
+# Copyright 1999-2019 Gentoo Foundation
+# Distributed under the terms of the GNU General Public License v2
+# $Id: $
+
+DESCRIPTION="Manage your chroot directories based on latest stage tarballs"
+MAINTAINER="nado@troglodyte.be"
+VERSION="0"
+
+DISTFILES_HOST="http://distfiles.gentoo.org"
+ARCH_AVAILABLE=(alpha amd64 arm hppa ia64 ppc s390 sh sparc x86)
+
+CACHEDIR=${EROOT}/var/cache/eselect-stage
+STAGELIST=${CACHEDIR}/stage-list.txt
+
+LIBDIR=${EROOT}/var/lib/eselect-stage
+CHROOTLIST=${LIBDIR}/chroot-list.txt
+
+CONFIG=${EROOT}/etc/eselect/stage.conf
+
+### setup ###
+
+## {{{
+
+setup() {
+	[[ -d ${CACHEDIR} ]] || mkdir -p ${CACHEDIR} || die
+	[[ -d ${LIBDIR} ]] || mkdir -p ${LIBDIR} || die
+	[[ -e ${STAGELIST} ]] || touch ${STAGELIST} || die
+}
+
+setup_arch() {
+	setup
+	[[ ${#} -eq 1 ]] || die
+	[[ -d ${CACHEDIR}/${1} ]] || mkdir -p ${CACHEDIR}/${1} || die
+}
+
+convert_profile_idx-name() {
+	[[ ${#} -eq 2 ]] || die
+
+	local arch="$1" profile_idx="$2"
+
+	setup_arch ${arch}
+
+	local listfile="${CACHEDIR}/${arch}/latest-stage3.txt" nil
+
+	[[ -e ${listfile} ]] || nil=$(update_latest-stage3_list ${arch})
+
+	local filename=$(tail -n+3 ${listfile} \
+		| tail -n+"${profile_idx}" \
+		| head -n1 | cut -d' ' -f 1) \
+		|| die
+	echo "${filename}"
+}
+## }}}
+
+### list action ###
+
+## {{{
+
+# $1 = arch
+update_latest-stage3_list() {
+	[[ ${#} -eq 1 ]] || die
+
+	local arch="$1"
+	local url="${DISTFILES_HOST}/releases/${arch}/autobuilds/latest-stage3.txt"
+	local out="${CACHEDIR}/${arch}/latest-stage3.txt"
+
+	setup_arch ${arch}
+
+	curl -sf "${url}" -o "${out}" || die "Could not fetch ${url} to ${out}"
+	echo "${out}"
+}
+
+format_latest-stage3_list() {
+	[[ ${#} -eq 1 ]] || die
+
+	[[ "$1" == "" ]] || [[ ! -e "$1" ]] && return
+
+	local list=($(cat "${1}" | tail -n+3 | cut -d' ' -f 1))
+	write_numbered_list -m "(none found)" "${list[@]}"
+}
+
+describe_list() {
+    echo "List managed chroot directories and stage tarballs"
+}
+
+describe_list_parameters() {
+	echo "<chroots|cache|latest [arch]>"
+}
+
+describe_list_options() {
+	echo "chroots : List installed chroot directories"
+	echo "cache   : List downloaded stage tarballs"
+	echo "latest  : List latest tarballs available"
+	echo "arch    : Only list latest tarballs from given arch (amd64, x86, etc)"
+}
+
+do_list() {
+	local usage='Usage: list <chroots|cache|latest [arch]>'
+	[[ ${#} -eq 1 ]] || [[ ${#} -eq 2 ]] || die -q "${usage}"
+
+	setup
+
+	local list=()
+	if [[ "${1}" == "cache" ]]; then
+		[[ -e "${STAGELIST}" ]] && list=( $(<"${STAGELIST}") )
+		write_list_start "Downloaded tarballs:"
+		write_numbered_list -m "(none found)" "${list[@]}"
+	elif [[ "${1}" == "chroots" ]]; then
+		[[ -e "${CHROOTLIST}" ]] && list=( $(<"${CHROOTLIST}" ) )
+		write_list_start "Installed chroot directories:"
+		write_numbered_list -m "(none found)" "${list[@]}"
+	elif [[ "${1}" == "latest" ]]; then
+		local arch file
+		if [[ ${#} -eq 2 ]]; then
+			arch="${2}"
+			write_list_start "Available latest stage[34] tarballs for ${arch}:"
+			file="$(update_latest-stage3_list ${arch})"
+			format_latest-stage3_list "${file}"
+		else
+			for arch in "${ARCH_AVAILABLE[@]}"
+			do
+				write_list_start "Available latest stage[34] tarballs for ${arch}:"
+				file="$(update_latest-stage3_list ${arch})"
+				format_latest-stage3_list "${file}"
+			done
+		fi
+	else
+		die -q "${usage}"
+	fi
+}
+## }}}
+
+### add action
+
+## {{{
+# $1 = arch
+# $2 = tarball path on distfile host
+fetch_stage() {
+	[[ ${#} -eq 2 ]] || die -q "Wrong number of arguments"
+
+	local arch="$1"
+	local filename="$2"
+
+	local url="${DISTFILES_HOST}/releases/${arch}/autobuilds/${filename}"
+	local out="${CACHEDIR}/${arch}/$(basename ${filename})"
+
+	if [[ $(grep -- "$out" "${STAGELIST}"|wc -l) -ge 1 ]]; then
+		echo ${out}
+		return
+	fi
+
+	curl -C - -# "${url}" --output "${out}" || die "Could not fetch ${url} in ${out}"
+
+	curl -C - -# "${url}.CONTENTS" --output "${out}.CONTENTS" || die
+	curl -C - -# "${url}.DIGESTS.asc" --output "${out}.DIGESTS.asc" || die
+
+	cd ${CACHEDIR}/${arch}
+	#gpg --verify ${out}.DIGESTS.asc"
+
+	# $verif should be equal to 2 (tarball + .CONTENTS OK)
+	local verif=$(sha512sum -c "${out}.DIGESTS.asc" 2>/dev/null \
+		| grep ': OK$' \
+		| wc -l)
+
+	[[ ${verif} -eq 2 ]] || die "Verification failed"
+
+	echo "${out}" >> "${STAGELIST}"
+	echo "${out}"
+}
+
+
+setup_chroot() {
+	[[ ${#} -eq 1 ]] || die
+	local chroot_dir="$1"
+	# Portage conf
+	mkdir -p "${chroot_dir}/etc/portage/repos.conf" || die
+
+	cp "${chroot_dir}/usr/share/portage/config/repos.conf" "${chroot_dir}/etc/portage/repos.conf/gentoo.conf" || die
+
+	sed 's/auto-sync = yes/auto-sync = no/' -i "${chroot_dir}/etc/portage/repos.conf/gentoo.conf" || die
+
+	echo "export PS1=\"(chroot:${chroot_name}) \$PS1\"" >> "${chroot_dir}/etc/bash/bashrc"
+
+	# Mounts handled by mount-chroot
+	ln -s mount-chroot "${EROOT%/}/etc/init.d/mount-chroot.${chroot_name}"
+
+	local rc_conf="${EROOT%/}/etc/conf.d/mount-chroot.${chroot_name}"
+	echo "CHROOT_PATH='${chroot_dir}'" >> "$rc_conf"
+	echo "PORTAGE=1" >> "$rc_conf"
+}
+
+
+describe_add() {
+	echo "Add a chroot directory with a stage-3 Gentoo install"
+}
+
+describe_add_parameters() {
+	echo "<name> <arch> <profile_idx>"
+}
+
+describe_add_options() {
+	echo "name:"
+	echo "arch:"
+	echo "profile_idx:"
+}
+
+do_add() {
+	[[ ${#} -eq 3 ]] || die -q "Wrong number of arguments"
+
+	local chroot_name="$1" arch="$2" profile_idx="$3"
+
+	local chroot_dir="${LIBDIR}/${chroot_name}"
+	local filename=$(convert_profile_idx-name ${arch} ${profile_idx}) || die -q
+
+	write_list_start "Adding a chroot directory ${chroot_name} based on $filename"
+	write_numbered_list_entry 1 "Fetching tarball"
+	archive=$(fetch_stage "${arch}" "${filename}")
+
+	write_numbered_list_entry 2 "Extracting to ${chroot_dir}"
+	mkdir -p "${chroot_dir}" || die
+	tar xpf "${archive}" -C "${chroot_dir}" || die
+
+	write_numbered_list_entry 3 "Setting up"
+	setup_chroot ${chroot_dir}
+	write_numbered_list_entry "*" "Done"
+
+	echo
+	echo "To use it:"
+	echo " rc-service mount-chroot.${chroot_name} start && chroot ${chroot_dir}"
+	echo "or"
+	echo " eselect stage enable ${chroot_name}"
+	#write_numbered_list_entry 4 "Calling post hooks"
+}
+## }}}
+
+### enable action ###
+
+## {{{
+
+describe_enable() {
+# enable > mount + chroot into dir
+	echo "Start needed mount-chroot service and chroot into installed stage"
+}
+
+describe_enable_parameters() {
+	echo "<name>"
+}
+
+describe_enable_options() {
+	echo "name: chroot name"
+}
+
+
+do_enable() {
+	local usage="enable <chroot_name>"
+	[[ ${#} -eq 1 ]] || die -q "$usage"
+
+	local chroot_name=${1}
+
+	local chroot_dir=${LIBDIR}/${chroot_name}
+
+	[[ -d ${chroot_dir} ]] || die -q "${chroot_dir} not found"
+
+	rc-service mount-chroot.${chroot_name} start || die
+	chroot ${LIBDIR}/${chroot_name}
+}
+## }}}
+
+### remove action ###
+
+## {{{
+
+describe_remove() {
+	echo "Remove given chroot directory"
+}
+
+describe_remove_parameters() {
+	echo "<name>"
+}
+
+describe_remove_options() {
+	echo "name: chroot name"
+}
+
+do_remove() {
+	local usage="remove <chroot_name>"
+
+	[[ ${#} -eq 1 ]] || die -q "$usage"
+
+	local chroot_name=${1}
+	rc-service mount-chroot.${chroot_name} stop
+	rm -rf /etc/{init,conf}.d/mount-chroot.${chroot_name} || die
+	rm -rf ${LIBDIR}/${chroot_name} || die
+	echo "Chroot '${chroot_name}' removed"
+}
+## }}}
+
+# vim: ts=4 sw=4 noet fdm=marker
