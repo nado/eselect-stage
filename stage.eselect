@@ -212,7 +212,7 @@ do_add() {
 	local chroot_dir="${LIBDIR}/${chroot_name}"
 	local filename=$(convert_profile_idx-name ${arch} ${profile_idx}) || die -q
 
-	write_list_start "Adding a chroot directory ${chroot_name} based on $filename"
+	write_list_start "Adding a chroot directory ${chroot_name} based on $(basename $filename)"
 	write_numbered_list_entry 1 "Fetching tarball"
 	archive=$(fetch_stage "${arch}" "${filename}")
 
@@ -223,6 +223,8 @@ do_add() {
 	write_numbered_list_entry 3 "Setting up"
 	setup_chroot ${chroot_dir}
 	write_numbered_list_entry "*" "Done"
+
+	echo "${chroot_name}:${archive}" >> ${CHROOTLIST}
 
 	echo
 	echo "To use it:"

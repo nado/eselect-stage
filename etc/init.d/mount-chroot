@@ -80,9 +80,8 @@ stop() {
 	umount -Rf "${CHROOT_PATH}"/sys > /dev/null &
 	umount -Rf "${CHROOT_PATH}"/tmp > /dev/null &
 
-	local remainingmounts=$(grep -- "${CHROOT_PATH}" /proc/self/mountinfo | wc -l)
-	while [ ${remainingmounts} -gt 0 ]; do
-		umount -Rf "$(grep -- ${CHROOT_PATH} /proc/self/mountinfo|head -n1|cut -d' ' -f5)"> /dev/null &
+	while [ $(grep -- "${CHROOT_PATH}" /proc/self/mountinfo | wc -l) -gt 0 ]; do
+		umount -Rf "$(grep -- ${CHROOT_PATH} /proc/self/mountinfo|head -n1|cut -d' ' -f5)"> /dev/null
 	done
 
 	eend $? "An error occurred while unmounting chroot directories"
