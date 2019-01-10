@@ -293,9 +293,9 @@ do_remove() {
 	[[ ${#} -eq 1 ]] || die -q "$usage"
 
 	local chroot_name=${1}
-	rc-service mount-chroot.${chroot_name} stop
-	rm -f /etc/{init,conf}.d/mount-chroot.${chroot_name} || die
-	rm -rf ${LIBDIR}/${chroot_name} || die
+	rc-service mount-chroot.${chroot_name} stop || die
+	rm -f /etc/{init,conf}.d/mount-chroot.${chroot_name}
+	rm -rf ${LIBDIR}/${chroot_name}
 	sed -i "/^${chroot_name}:/d" ${CHROOTLIST}
 	echo "Chroot '${chroot_name}' removed"
 }

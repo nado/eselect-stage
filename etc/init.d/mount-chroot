@@ -35,7 +35,7 @@ start() {
 	mount --rbind /sys "${CHROOT_PATH}"/sys > /dev/null &
 
 	mkdir -p "${TMPDIR}" || die "Could not create tmp dir ${TMPDIR}"
-	mount -o bind "${TMPDIR}" "${CHROOT_PATH}"/tmp > /dev/null &
+	mount --rbind "${TMPDIR}" "${CHROOT_PATH}"/tmp > /dev/null &
 
 	cp -L /etc/resolv.conf "${CHROOT_PATH}/etc/resolv.conf"
 
