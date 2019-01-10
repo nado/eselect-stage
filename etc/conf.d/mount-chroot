@@ -7,13 +7,25 @@
 
 # Should we bind gentoo repository to the host's gentoo repo? 1/0
 # This location is determined by $(portageq get_repo_path ${EROOT} gentoo)
-#PORTAGE=1
+#MOUNT_PORTAGE=1
+# Absolute location of the portage repo *inside* the chroot
+#CHROOT_PORTDIR=/usr/portage
 
 # Should we make it writable?
-#PORTAGE_RW=0
+#MOUNT_PORTAGE_RW=0
 
 # Should we bind DISTDIR?
-#PORTAGE_DIST=1
-
+# This location is determined by $(portageq envvar DISTDIR)
+#MOUNT_DISTDIR=1
+# Absolute location of $DISTDIR *inside* the chroot
+#CHROOT_DISTDIR=/usr/portage/distfiles
 # Should we make the portage distfiles directory writable?
-#PORTAGE_DIST_RW=1
+#MOUNT_DISTDIR_RW=1
+
+# Should we bind PKGDIR?
+# This location is determined by $(portageq envvar PKGDIR)
+#MOUNT_PKGDIR=1
+# Absolute location of $PKGDIR *inside* the chroot
+#CHROOT_PKGDIR=/usr/portage/packages
+# Should we make $PKGDIR writable?
+#MOUNT_PKGDIR_RW=1

@@ -21,43 +21,53 @@ start() {
 		eerror "You must set the variable CHROOT_PATH in the config file"
 		return 1
 	fi
-	if [ "${CHROOT_DIST}" = "" ]; then
-		CHROOT_DIST="/usr/portage/distfiles"
-	fi
-	local eroot portdir distdir
-	eroot="$(portageq envvar EROOT)"
-	portdir="$(portageq get_repo_path ${eroot} gentoo)"
-	distdir="$(portageq envvar DISTDIR)"
+
+	local eroot="$(portageq envvar EROOT)"
+
+	[[ "${CHROOT_DISTDIR}" = "" ]] && CHROOT_DISTDIR="/usr/portage/distfiles"
+	[[ "${CHROOT_PKGDIR}" = "" ]]  && CHROOT_PKGDIR="/usr/portage/packages"
+	[[ "${CHROOT_PORTDIR}" = "" ]] && CHROOT_PORTDIR="/usr/portage"
+
 
 	ebegin "Mounting chroot directories"
 	mount --rbind /dev "${CHROOT_PATH}"/dev > /dev/null &
 	mount -t proc none "${CHROOT_PATH}"/proc > /dev/null &
-	mount -o bind /sys "${CHROOT_PATH}"/sys > /dev/null &
+	mount --rbind /sys "${CHROOT_PATH}"/sys > /dev/null &
 
 	mkdir -p "${TMPDIR}" || die "Could not create tmp dir ${TMPDIR}"
 	mount -o bind "${TMPDIR}" "${CHROOT_PATH}"/tmp > /dev/null &
 
 	cp -L /etc/resolv.conf "${CHROOT_PATH}/etc/resolv.conf"
 
-	if [[ "$PORTAGE" -eq 1 ]]; then
-		mkdir -p "${CHROOT_PATH}/usr/portage" || die "Could not create portage dir"
+	if [[ "$MOUNT_PORTAGE" -eq 1 ]]; then
+		local portdir="$(portageq get_repo_path ${eroot} gentoo)"
+		mkdir -p "${CHROOT_PATH}${CHROOT_PORTDIR}" || die "Could not create portage dir"
 
 		local rwmountopt="-r"
-		if [[ "$PORTAGE_RW" -eq 1 ]]; then
-			rwmountopt="-w"
-		fi
+		[[ "$MOUNT_PORTAGE_RW" -eq 1 ]] && rwmountopt="-w"
 
 		# rbind is needed to mount potential nfs shared portage dir from host
-		mount --rbind "${rwmountopt}" "${portdir}" "${CHROOT_PATH}/usr/portage" > /dev/null &
+		mount --rbind "${rwmountopt}" "${portdir}" "${CHROOT_PATH%/}${CHROOT_PORTDIR}" > /dev/null &
 	fi
-	if [[ "${PORTAGE_DIST}" -eq 1 ]]; then
-		mkdir -p "${CHROOT_PATH}${CHROOT_DIST}" || die "Could not create portage distfiles dir"
+	if [[ "${MOUNT_DISTDIR}" -eq 1 ]]; then
+		local distdir="$(portageq envvar DISTDIR)"
+		mkdir -p "${CHROOT_PATH}${CHROOT_DISTDIR}" || die "Could not create portage distfiles dir"
 
 		local rwmountopt="-r"
-		[[ "$PORTAGE_DIST_RW" -eq 0 ]] || rwmountopt="-w"
+		[[ "$MOUNT_DISTDIR_RW" -eq 1 ]] && rwmountopt="-w"
 
 		# rbind is needed to mount potential nfs shared portage dir from host
-		mount --rbind "${rwmountopt}" "${distdir}" "${CHROOT_PATH}${CHROOT_DIST}" > /dev/null &
+		mount --rbind "${rwmountopt}" "${distdir}" "${CHROOT_PATH%/}${CHROOT_DISTDIR}" > /dev/null &
+	fi
+	if [[ "${MOUNT_PKGDIR}" -eq 1 ]]; then
+		local pkgdir="$(portageq envvar PKGDIR)"
+		mkdir -p "${CHROOT_PATH%/}${CHROOT_PKGDIR}" || die
+
+		local rwmountopt="-r"
+		[[ "$MOUNT_PKGDIR_RW" -eq 1 ]] && rwmountopt="-w"
+
+		# rbind is needed to mount potential nfs shared portage dir from host
+		mount --rbind "${rwmountopt}" "${pkgdir}" "${CHROOT_PATH%/}${CHROOT_PKGDIR}" > /dev/null &
 	fi
 
 	eend $? "An error occurred while mounting chroot directories"
@@ -66,14 +76,14 @@ start() {
 stop() {
 	ebegin "Unmounting chroot directories"
 	umount -Rf "${CHROOT_PATH}"/dev > /dev/null &
-	umount -f "${CHROOT_PATH}"/proc > /dev/null &
-	umount -f "${CHROOT_PATH}"/sys > /dev/null &
-	umount -f "${CHROOT_PATH}"/tmp > /dev/null &
-	if [ `stat -fc%t:%T "${CHROOT_PATH}/usr/portage/distfiles"` != `stat -fc%t:%T "${CHROOT_PATH}/usr/portage"` ]; then
-		umount -Rf "${CHROOT_PATH}"/usr/portage/distfiles > /dev/null &
-	fi
-	if [ `stat -fc%t:%T "${CHROOT_PATH}/usr/portage"` != `stat -fc%t:%T "${CHROOT_PATH}/usr"` ]; then
-		umount -Rf "${CHROOT_PATH}"/usr/portage > /dev/null &
-	fi
+	umount -Rf "${CHROOT_PATH}"/proc > /dev/null &
+	umount -Rf "${CHROOT_PATH}"/sys > /dev/null &
+	umount -Rf "${CHROOT_PATH}"/tmp > /dev/null &
+
+	local remainingmounts=$(grep -- "${CHROOT_PATH}" /proc/self/mountinfo | wc -l)
+	while [ ${remainingmounts} -gt 0 ]; do
+		umount -Rf "$(grep -- ${CHROOT_PATH} /proc/self/mountinfo|head -n1|cut -d' ' -f5)"> /dev/null &
+	done
+
 	eend $? "An error occurred while unmounting chroot directories"
 }
