@@ -269,26 +269,28 @@ describe_enable() {
 }
 
 describe_enable_parameters() {
-	echo "<name>"
+	echo "<name> [args...]"
 }
 
 describe_enable_options() {
 	echo "name: chroot name"
+	echo "args: arguments given to the chroot command"
 }
 
 
 do_enable() {
-	local usage="enable <chroot_name>"
-	[[ ${#} -eq 1 ]] || die -q "$usage"
+	local usage="enable <chroot_name> [args...]"
+	[[ ${#} -eq 0 ]] && die -q "$usage"
 
 	local chroot_name=${1}
+	shift
 
 	local chroot_dir=${LIBDIR}/${chroot_name}
 
 	[[ -d ${chroot_dir} ]] || die -q "${chroot_dir} not found"
 
-	rc-service mount-chroot.${chroot_name} start || die
-	chroot ${LIBDIR}/${chroot_name}
+	rc-service mount-chroot.${chroot_name} start > /dev/null 2>&1 || die
+	chroot ${LIBDIR}/${chroot_name} "$@"
 }
 ## }}}
 
