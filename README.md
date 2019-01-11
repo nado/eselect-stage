@@ -14,8 +14,10 @@ Standard actions:
   version                   Display version information
 
 Extra actions:
-  add <name> <arch> <profile_idx>
+  add [-r <repo[:destpath]...>] <name> <arch> <profile_idx>
                             Add a chroot directory with a stage3 Gentoo install
+    -r                        Bind mount a list of repositories from host
+    repo                      Space separated list of tuples where destpath is the mount point inside the chrooted directory
     name                      Name of the chroot
     arch                      alpha amd64 arm hppa ia64 ppc s390 sh sparc x86
     profile_idx               Per arch index of the latest stages

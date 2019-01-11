@@ -210,8 +210,8 @@ describe_add_parameters() {
 }
 
 describe_add_options() {
-	echo "[-r] : Bind mount a list of repositories from host"
-	echo "repos : Space separated list where destpath the mount point inside the chrooted directory"
+	echo "-r : Bind mount a list of repositories from host"
+	echo "repo : Space separated list of tuples where destpath is the mount point inside the chrooted directory"
 	echo "name : Name of the chroot"
 	echo "arch : ${ARCH_AVAILABLE[@]}"
 	echo "profile_idx : Per arch index of the latest stages"
