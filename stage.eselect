@@ -15,7 +15,7 @@ STAGELIST=${CACHEDIR}/stage-list.txt
 LIBDIR=${EROOT}/var/lib/eselect-stage
 CHROOTLIST=${LIBDIR}/chroot-list.txt
 
-CONFIG=${EROOT}/etc/eselect/stage.conf
+CONFIGDIR=${EROOT}/etc/eselect/stage
 
 ### setup ###
 
@@ -175,6 +175,7 @@ setup_chroot() {
 	# Portage conf
 	mkdir -p "${chroot_dir}/etc/portage/repos.conf" || die
 
+	#TODO: Setup alternative conf file
 	cp "${chroot_dir}/usr/share/portage/config/repos.conf" \
 		"${chroot_dir}/etc/portage/repos.conf/gentoo.conf" || die
 

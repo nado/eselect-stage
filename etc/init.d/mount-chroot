@@ -26,7 +26,7 @@ start() {
 
 	[[ "${CHROOT_DISTDIR}" = "" ]] && CHROOT_DISTDIR="/usr/portage/distfiles"
 	[[ "${CHROOT_PKGDIR}" = "" ]]  && CHROOT_PKGDIR="/usr/portage/packages"
-	[[ "${CHROOT_REPOS_DIR}" = "" ]] && CHROOT_PORTDIR="/var/db/repos"
+	[[ "${CHROOT_REPOS_DIR}" = "" ]] && CHROOT_REPOS_DIR="/var/db/repos"
 
 
 	ebegin "Mounting chroot directories"
