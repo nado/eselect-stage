@@ -187,9 +187,10 @@ setup_chroot() {
 	# Mounts handled by mount-chroot
 	ln -s mount-chroot "${EROOT%/}/etc/init.d/mount-chroot.${chroot_name}"
 
-	local rc_conf="${EROOT%/}/etc/conf.d/mount-chroot.${chroot_name}"
+	local rc_conf_base="${EROOT%/}/etc/conf.d/mount-chroot"
+	local rc_conf="${rc_conf_base}.${chroot_name}"
+	cp "${rc_conf_base}" "${rc_conf}" || die
 	echo "CHROOT_PATH='${chroot_dir}'" >> "$rc_conf"
-	echo "PORTAGE=1" >> "$rc_conf"
 }
 
 

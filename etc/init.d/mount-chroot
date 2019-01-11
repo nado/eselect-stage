@@ -26,7 +26,7 @@ start() {
 
 	[[ "${CHROOT_DISTDIR}" = "" ]] && CHROOT_DISTDIR="/usr/portage/distfiles"
 	[[ "${CHROOT_PKGDIR}" = "" ]]  && CHROOT_PKGDIR="/usr/portage/packages"
-	[[ "${CHROOT_PORTDIR}" = "" ]] && CHROOT_PORTDIR="/usr/portage"
+	[[ "${CHROOT_REPOS_DIR}" = "" ]] && CHROOT_PORTDIR="/var/db/repos"
 
 
 	ebegin "Mounting chroot directories"
@@ -39,16 +39,27 @@ start() {
 
 	cp -L /etc/resolv.conf "${CHROOT_PATH}/etc/resolv.conf"
 
-	if [[ "$MOUNT_PORTAGE" -eq 1 ]]; then
-		local portdir="$(portageq get_repo_path ${eroot} gentoo)"
-		mkdir -p "${CHROOT_PATH}${CHROOT_PORTDIR}" || die "Could not create portage dir"
+	if [[ "$MOUNT_REPOS" != "" ]]; then
+		local reponame repodir chrootrepodir rwmountopt
+		for repo in $MOUNT_REPOS
+		do
+			reponame=$(echo $repo|cut -d: -f1)
+			repodir="$(portageq get_repo_path ${eroot} ${reponame})"
 
-		local rwmountopt="-r"
-		[[ "$MOUNT_PORTAGE_RW" -eq 1 ]] && rwmountopt="-w"
+			# Bind mount to specified dir or into default repos directory
+			chrootrepodir=${CHROOT_REPOS_DIR}/${reponame}
+			[[ $(echo $repo|grep ':'|wc -l) -gt 0 ]] && chrootrepodir=$(echo $repo|cut -d: -f2)
 
-		# rbind is needed to mount potential nfs shared portage dir from host
-		mount --rbind "${rwmountopt}" "${portdir}" "${CHROOT_PATH%/}${CHROOT_PORTDIR}" > /dev/null &
+			mkdir -p "${CHROOT_PATH}${chrootrepodir}" || die "Could not create directory for repository ${reponame}"
+
+			rwmountopt="-r"
+			[[ "$MOUNT_PORTAGE_RW" -eq 1 ]] && rwmountopt="-w"
+
+			# rbind is needed to mount potential nfs shared portage dir from host
+			mount --rbind "${rwmountopt}" "${repodir}" "${CHROOT_PATH%/}${chrootrepodir}" > /dev/null &
+		done
 	fi
+
 	if [[ "${MOUNT_DISTDIR}" -eq 1 ]]; then
 		local distdir="$(portageq envvar DISTDIR)"
 		mkdir -p "${CHROOT_PATH}${CHROOT_DISTDIR}" || die "Could not create portage distfiles dir"
