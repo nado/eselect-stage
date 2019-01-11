@@ -170,8 +170,14 @@ fetch_stage() {
 
 
 setup_chroot() {
-	[[ ${#} -eq 1 ]] || die
-	local chroot_dir="$1"
+	local repos
+	if [[ ${#} -eq 3 ]]; then
+		repos="$1"
+		shift
+	fi
+	[[ ${#} -eq 2 ]] || die
+	local chroot_dir="$1" chroot_name="$2"
+
 	# Portage conf
 	mkdir -p "${chroot_dir}/etc/portage/repos.conf" || die
 
@@ -191,25 +197,32 @@ setup_chroot() {
 	local rc_conf_base="${EROOT%/}/etc/conf.d/mount-chroot"
 	local rc_conf="${rc_conf_base}.${chroot_name}"
 	cp "${rc_conf_base}" "${rc_conf}" || die
-	echo "CHROOT_PATH='${chroot_dir}'" >> "$rc_conf"
+	echo "CHROOT_PATH='$chroot_dir'" >> "$rc_conf"
+	echo "MOUNT_REPOS='$repos'" >> "$rc_conf"
 }
-
 
 describe_add() {
 	echo "Add a chroot directory with a stage3 Gentoo install"
 }
 
 describe_add_parameters() {
-	echo "<name> <arch> <profile_idx>"
+	echo "[-r <repo[:destpath]...>] <name> <arch> <profile_idx>"
 }
 
 describe_add_options() {
+	echo "[-r] : Bind mount a list of repositories from host"
+	echo "repos : Space separated list where destpath the mount point inside the chrooted directory"
 	echo "name : Name of the chroot"
 	echo "arch : ${ARCH_AVAILABLE[@]}"
 	echo "profile_idx : Per arch index of the latest stages"
 }
 
 do_add() {
+	local repos=""
+	if [[ ${1} = -r ]] && [[ ${#} -gt 2 ]]; then
+		repos="$2"
+		shift 2
+	fi
 	[[ ${#} -eq 3 ]] || die -q "Wrong number of arguments"
 
 	local chroot_name="$1" arch="$2" profile_idx="$3"
@@ -226,7 +239,7 @@ do_add() {
 	tar xpf "${archive}" -C "${chroot_dir}" || die
 
 	write_numbered_list_entry 3 "Setting up"
-	setup_chroot ${chroot_dir}
+	setup_chroot "${repos}" ${chroot_dir} ${chroot_name}
 	write_numbered_list_entry "*" "Done"
 
 	echo "${chroot_name}:${archive}" >> ${CHROOTLIST}

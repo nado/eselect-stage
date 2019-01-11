@@ -24,7 +24,7 @@ MOUNT_DISTDIR_RW=1
 
 # What repositories should be bind mounted to the chroot directory
 # Absolute location of the repositories *inside* the chroot
-#CHROOT_REPOS_DIR=/var/db/repos
+CHROOT_REPOS_DIR=/var/db/repos
 
 # Space separated list of repositories to bind mount
 # The host location is determined with portageq
