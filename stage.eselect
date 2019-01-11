@@ -232,7 +232,7 @@ do_add() {
 
 	write_list_start "Adding a chroot directory ${chroot_name} based on $(basename $filename)"
 	write_numbered_list_entry 1 "Fetching tarball"
-	archive=$(fetch_stage "${arch}" "${filename}")
+	local archive=$(fetch_stage "${arch}" "${filename}")
 
 	write_numbered_list_entry 2 "Extracting to ${chroot_dir}"
 	mkdir -p "${chroot_dir}" || die
@@ -240,16 +240,23 @@ do_add() {
 
 	write_numbered_list_entry 3 "Setting up"
 	setup_chroot "${repos}" ${chroot_dir} ${chroot_name}
-	write_numbered_list_entry "*" "Done"
+
+	write_numbered_list_entry 4 "Calling post hooks"
+	local sh
+	for sh in ${EROOT%/}/etc/eselect/stage/add.post/* ;
+	do
+		[[ -x "$sh" ]] && "${sh}" "$chroot_name" "$chroot_dir"
+	done
+	unset sh
 
 	echo "${chroot_name}:${archive}" >> ${CHROOTLIST}
+	write_numbered_list_entry "*" "Done"
 
 	echo
 	echo "To use it:"
 	echo " rc-service mount-chroot.${chroot_name} start && chroot ${chroot_dir}"
 	echo "or"
 	echo " eselect stage enable ${chroot_name}"
-	#write_numbered_list_entry 4 "Calling post hooks"
 }
 ## }}}
 
