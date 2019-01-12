@@ -257,7 +257,7 @@ do_add() {
 			${EROOT%/}/etc/conf.d/mount-chroot.${chroot_name}
 
 		local path="$(which qemu-${arch})"
-		[[ ${path} -eq "" ]] && die "qemu-${arch} not found, cross chroot not supported"
+		[[ ${path} = "" ]] && die "qemu-${arch} not found, cross chroot not supported"
 
 		cp --reflink=auto ${path} ${chroot_dir%/}/usr/bin/qemu-${arch} || die
 	fi
