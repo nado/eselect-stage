@@ -8,6 +8,39 @@ VERSION="0"
 
 DISTFILES_HOST="http://distfiles.gentoo.org"
 ARCH_AVAILABLE=(alpha amd64 arm hppa ia64 ppc s390 sh sparc x86)
+#GENTOO_QEMU_ARCHES=(arm64:aarch64 arm64:aarch64_be
+# alpha:alpha           : userspace emulation target
+# arm:arm             : ARM (little endian) userspace emulation target
+# arm:armeb           : ARM (big endian) userspace emulation target
+# _hppa            : userspace emulation target
+# _i386            : userspace emulation target
+# _m68k            : userspace emulation target
+# _microblaze      : userspace emulation target
+# _microblazeel    : userspace emulation target
+# _mips            : userspace emulation target
+# _mips64          : userspace emulation target
+# _mips64el        : userspace emulation target
+# _mipsel          : userspace emulation target
+# _mipsn32         : MIPS N32 ABI userspace emulation target
+# _mipsn32el       : MIPS N32 ABI LE userspace emulation target
+# _nios2           : userspace emulation target
+# _or1k            : OpenRISC system emulation target
+# _ppc             : PowerPC 32-bit big endian userspace emulation target
+# _ppc64           : PowerPC 64-bit big endian userspace emulation target
+# _ppc64abi32      : userspace emulation target
+# _ppc64le         : PowerPC 64-bit little endian userspace emulation target
+# _riscv32         : userspace emulation target
+# _riscv64         : userspace emulation target
+# _s390x           : userspace emulation target
+# _sh4             : userspace emulation target
+# _sh4eb           : userspace emulation target
+# _sparc           : userspace emulation target
+# _sparc32plus     : userspace emulation target
+# _sparc64         : userspace emulation target
+# _tilegx          : TILE-Gx 64-bit userspace emulation target
+# _x86_64          : userspace emulation target
+# _xtensa          : userspace emulation target
+# _xtensaeb
 
 CACHEDIR=${EROOT}/var/cache/eselect-stage
 STAGELIST=${CACHEDIR}/stage-list.txt
@@ -252,7 +285,7 @@ do_add() {
 	echo "${chroot_name}:${archive}" >> ${CHROOTLIST}
 	write_numbered_list_entry "*" "Done"
 
-	if [[ $(arch) != ${arch} ]]; then
+	if [[ $(portageq envvar ARCH) != ${arch} ]]; then
 		echo "rc_need='qemu-binfmt'" >> \
 			${EROOT%/}/etc/conf.d/mount-chroot.${chroot_name}
 
