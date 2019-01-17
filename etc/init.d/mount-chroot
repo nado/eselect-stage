@@ -3,7 +3,6 @@
 # Distributed under the terms of the GNU General Public License v2
 
 CHROOT=${SVCNAME#*.}
-TMPDIR="/tmp/chroot-mount/${CHROOT}"
 
 
 depend() {
@@ -34,8 +33,7 @@ start() {
 	mount -t proc none "${CHROOT_PATH}"/proc > /dev/null &
 	mount --rbind /sys "${CHROOT_PATH}"/sys > /dev/null &
 
-	mkdir -p "${TMPDIR}" || die "Could not create tmp dir ${TMPDIR}"
-	mount --rbind "${TMPDIR}" "${CHROOT_PATH}"/tmp > /dev/null &
+	mount -t tmpfs tmpfs "${CHROOT_PATH}"/tmp > /dev/null &
 
 	cp -L /etc/resolv.conf "${CHROOT_PATH}/etc/resolv.conf"
 
